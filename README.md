@@ -1,4 +1,4 @@
-# mis-comprobantes-tot
+# mis-comprobantes-totalizador
  Crea versiones totalizadas de los libros xlsx de mis comprobantes de afip;
  Verifica que los IVA correspondan a la aplicación de alguna combinatoria de las alícuotas; 
  de lo contrario lo informa en un log.txt en el directorio del mismo programa,
