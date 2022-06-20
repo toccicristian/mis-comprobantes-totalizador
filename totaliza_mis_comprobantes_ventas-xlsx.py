@@ -111,6 +111,7 @@ def totaliza_xlsx(wb_url,
     if fila_ultimo_dato < int(fila_dato_inicial):
         wb.save(wb_url.rstrip('.xlsx') + sufijo + '.xlsx')
         return False
+
     ws[str(col_denominacion) + str(fila_ultimo_dato + 2)] = 'TOTALES :'
     for col in columnas_que_importan:
         total = float(0.0)
