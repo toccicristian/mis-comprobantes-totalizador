@@ -105,33 +105,44 @@ def celda_fnorm(celda):
 
 
 def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A'):
-    fila_ultimo_dato = obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial,
-                                                  col_testigo=col_testigo)
     wb = openpyxl.load_workbook(wb_url)
     ws = wb.active
-    if fila_ultimo_dato < int(fila_dato_inicial):
+    if obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial, col_testigo=col_testigo) < int(fila_dato_inicial):
         wb.save(wb_url.rstrip('.xlsx') + '_corregido-enblanco.xlsx')
         return False
+
     col_tipo_comp = 'B'
+    col_tcambio = 'J'
     col_netog = 'L'
     col_nog = 'M'
     col_op_ex = 'N'
     col_iva = 'O'
     col_total = 'P'
     ws['D2'] = 'N. Comp.'
-    for fila in range(int(fila_dato_inicial), fila_ultimo_dato + 1):
-        ws[col_netog + str(fila)] = round(celda_fnorm(ws[col_iva + str(fila)]) * 100 / 21, 2)
+
+    for fila in range(int(fila_dato_inicial), obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial, col_testigo=col_testigo) + 1):
+        alic=21
+        if alicuotas_verificadas(neto=celda_fnorm(ws[col_netog + str(fila)]),iva=celda_fnorm(ws[col_iva + str(fila)])):
+            alic=alicuotas_verificadas(neto=celda_fnorm(ws[col_netog + str(fila)]),iva=celda_fnorm(ws[col_iva + str(fila)]))[0]
+
+        ws[col_iva + str(fila)] = round(celda_fnorm(ws[col_netog + str(fila)]) * alic / 100,2)
         ws[col_nog + str(fila)] = round(celda_fnorm(ws[col_total + str(fila)]) -
                                         celda_fnorm(ws[col_netog + str(fila)]) -
                                         celda_fnorm(ws[col_op_ex + str(fila)]) -
                                         celda_fnorm(ws[col_iva + str(fila)]), 2)
+
         if float(ws[col_nog + str(fila)].value) < 0.0:
             ws[col_nog + str(fila)] = round(0.0, 2)
+
+        for col in [col_netog,col_nog,col_op_ex,col_iva,col_total]: # convierto a tipo de cambio:
+            ws[col + str(fila)] = round(celda_fnorm(ws[col + str(fila)])*celda_fnorm(ws[col_tcambio + str(fila)]),2)
+
         if 'factura c' in str(ws[col_tipo_comp + str(fila)].value).lower():
             ws[col_netog + str(fila)] = float(0.0)
             ws[col_nog + str(fila)] = float(0.0)
             ws[col_op_ex + str(fila)] = float(0.0)
             ws[col_iva + str(fila)] = float(0.0)
+
     wb.save(wb_url.rstrip('.xlsx') + '_corregido.xlsx')
     wb.close()
     return wb_url.rstrip('.xlsx') + '_corregido.xlsx'
@@ -263,5 +274,9 @@ for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
         ajusta_columna(ws, ncol=n_col, cushion=4)
     ajusta_columna(ws, ncol=ws.max_column - 2, cushion=6)
     ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
+    ws.page_setup.paperHeight = '297mm'
+    ws.page_setup.paperWidth = '210mm'
+    ws.page_setup.fitToPage = True
+    ws.page_setup.fitToHeight = False
     wb.save(url_corregido)
     wb.close()
