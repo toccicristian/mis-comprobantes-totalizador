@@ -7,132 +7,23 @@ import os
 import glob
 import sys
 import itertools
+import configparser
+import clases.orden_columnas
 
-
-class Orden_columnas:
-    def __init__(self,pv,n_comp,t_comp,denominacion,n_documento,t_documento,t_cambio,neto,neto_no_g,exento,iva,total):
-        self._pv=pv
-        self._n_comp=n_comp
-        self._t_comp=t_comp
-        self._denominacion=denominacion
-        self._n_documento=n_documento
-        self._t_documento=t_documento
-        self._t_cambio=t_cambio
-        self._neto=neto
-        self._neto_no_g=neto_no_g
-        self._exento=exento
-        self._iva=iva
-        self._total=total
-
-    @property
-    def pv(self):
-        return self._pv
-
-    @pv.setter
-    def pv(self, pv):
-        self._pv=pv
-
-    @property
-    def n_comp(self):
-        return self._n_comp
-
-    @n_comp.setter
-    def n_comp(self, n_comp):
-        self._n_comp=n_comp
-
-    @property
-    def t_comp(self):
-        return self._t_comp
-
-    @t_comp.setter
-    def t_comp(self, t_comp):
-        self._t_comp=t_comp
-
-    @property
-    def denominacion(self):
-        return self._denominacion
-
-    @denominacion.setter
-    def denominacion(self, denominacion):
-        self._denominacion=denominacion
-
-    @property
-    def n_documento(self):
-        return self._n_documento
-
-    @n_documento.setter
-    def n_documento(self,n_documento):
-        self._n_documento=n_documento
-
-    @property
-    def t_documento(self):
-        return self._t_documento
-
-    @t_documento.setter
-    def t_documento(self,t_documento):
-        self._t_documento=t_documento
-
-    @property
-    def t_cambio(self):
-        return self._t_cambio
-
-    @t_cambio.setter
-    def t_cambio(self, t_cambio):
-        self._t_cambio=t_cambio
-
-    @property
-    def neto(self):
-        return self._neto
-
-    @neto.setter
-    def neto(self, neto):
-        self._neto=neto
-
-    @property
-    def neto_no_g(self):
-        return self._neto_no_g
-
-    @neto_no_g.setter
-    def neto_no_g(self, neto_no_g):
-        self._neto_no_g=neto_no_g
-
-    @property
-    def exento(self):
-        return self._exento
-
-    @exento.setter
-    def exento(self, exento):
-        self._exento=exento
-
-    @property
-    def iva(self):
-        return self._iva
-
-    @iva.setter
-    def iva(self, iva):
-        self._iva=iva
-
-    @property
-    def total(self):
-        return self._total
-
-    @total.setter
-    def total(self,total):
-        self._total=total
-
-
-ordcol=Orden_columnas(pv='C',
-                      n_comp='D',
-                      t_comp='B',
-                      denominacion='H',
-                      n_documento='G',
-                      t_documento='F',
-                      t_cambio='I',
-                      neto='K',
-                      neto_no_g='L',
-                      exento='M',
-                      iva='N',
-                      total='O')
+configuracion=configparser.ConfigParser()
+configuracion.read('config.ini')
+ordcol=clases.orden_columnas.Orden_columnas(pv=configuracion.get('Iva Compras','punto de ventas'),
+                      n_comp=configuracion.get('Iva Compras','numero de comprobante'),
+                      t_comp=configuracion.get('Iva Compras','tipo de comprobante'),
+                      denominacion=configuracion.get('Iva Compras','denominacion'),
+                      n_documento=configuracion.get('Iva Compras','numero de documento'),
+                      t_documento=configuracion.get('Iva Compras','tipo de documento'),
+                      t_cambio=configuracion.get('Iva Compras','tipo de cambio'),
+                      neto=configuracion.get('Iva Compras','neto'),
+                      neto_no_g=configuracion.get('Iva Compras','neto no gravado'),
+                      exento=configuracion.get('Iva Compras','exento'),
+                      iva=configuracion.get('Iva Compras','iva'),
+                      total=configuracion.get('Iva Compras','total'))
 
 
 def normpath(path=''):
@@ -199,7 +90,7 @@ def obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial='1', col_testigo='A')
 
 
 def verifica_alicuotas_xlsx(wb_url,
-                            orden=Orden_columnas,
+                            orden=clases.orden_columnas.Orden_columnas,
                             fila_dato_inicial='1',
                             col_testigo='A'):
     sin_errores = True
@@ -229,7 +120,7 @@ def celda_fnorm(celda):
     return float(str(celda.value).replace(',', '.'))
 
 
-def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A', orden=Orden_columnas):
+def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A', orden=clases.orden_columnas.Orden_columnas):
     wb = openpyxl.load_workbook(wb_url)
     ws = wb.active
     if obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial, col_testigo=col_testigo) < int(fila_dato_inicial):
@@ -274,7 +165,7 @@ def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A', orden
 
 
 def totaliza_xlsx(wb_url,
-                  orden=Orden_columnas,
+                  orden=clases.orden_columnas.Orden_columnas,
                   fila_dato_inicial='1',
                   sufijo='',
                   prefijo='',
@@ -337,7 +228,7 @@ def ajusta_columna(hoja, ncol, cushion=int(8), fila_inicial=int(2)):
     hoja.column_dimensions[get_column_letter(ncol)].width = max_w + cushion
 
 
-def corrige_nombres_campo(hoja, fila_titulos=int(2),orden=Orden_columnas):
+def corrige_nombres_campo(hoja, fila_titulos=int(2),orden=clases.orden_columnas.Orden_columnas):
     col_pv = f'{orden.pv}'
     col_n_comp = f'{orden.n_comp}'
     col_tipo_doc = f'{orden.t_documento}'
