@@ -5,6 +5,24 @@ import os
 import glob
 import sys
 import itertools
+import configparser
+import clases.orden_columnas
+
+
+configuracion=configparser.ConfigParser()
+configuracion.read('config.ini')
+ordcol=clases.orden_columnas.Orden_columnas(pv=configuracion.get('Iva Ventas','punto de ventas'),
+                      n_comp=configuracion.get('Iva Ventas','numero de comprobante'),
+                      t_comp=configuracion.get('Iva Ventas','tipo de comprobante'),
+                      denominacion=configuracion.get('Iva Ventas','denominacion'),
+                      n_documento=configuracion.get('Iva Ventas','numero de documento'),
+                      t_documento=configuracion.get('Iva Ventas','tipo de documento'),
+                      t_cambio=configuracion.get('Iva Ventas','tipo de cambio'),
+                      neto=configuracion.get('Iva Ventas','neto'),
+                      neto_no_g=configuracion.get('Iva Ventas','neto no gravado'),
+                      exento=configuracion.get('Iva Ventas','exento'),
+                      iva=configuracion.get('Iva Ventas','iva'),
+                      total=configuracion.get('Iva Ventas','total'))
 
 
 def normpath(path=''):
@@ -71,8 +89,7 @@ def obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial='1', col_testigo='A')
 
 
 def verifica_alicuotas_xlsx(wb_url,
-                            columna_neto='',
-                            columna_iva='',
+                            orden=clases.orden_columnas.Orden_columnas,
                             fila_dato_inicial='1',
                             col_testigo='A'):
     sin_errores = True
@@ -85,40 +102,40 @@ def verifica_alicuotas_xlsx(wb_url,
     ws = wb.active
     for fila in range(int(fila_dato_inicial), fila_ultimo_dato + 1):
         if not alicuotas_verificadas(
-                neto=float(none_floater(ws[str(columna_neto) + str(fila)].value)),
-                iva=float(none_floater(ws[str(columna_iva) + str(fila)].value))):
+                neto=float(none_floater(ws[str(orden.neto) + str(fila)].value)),
+                iva=float(none_floater(ws[str(orden.iva) + str(fila)].value))):
             sin_errores = False
-            loguear('NO se verifica combinatoria de alicuotas posible para [' + str(columna_neto) + str(
+            loguear('NO se verifica combinatoria de alicuotas posible para [' + str(orden.neto) + str(
                 fila) + '] en ' + str(os.path.split(wb_url)[1])+'\n')
-            print('NO se verifica combinatoria de alicuotas posible para [' + str(columna_neto) + str(
+            print('NO se verifica combinatoria de alicuotas posible para [' + str(orden.neto) + str(
                 fila) + '] en ' + str(os.path.split(wb_url)[1]))
     wb.close()
     return sin_errores
 
 
 def totaliza_xlsx(wb_url,
-                  columnas_que_importan=[],
+                  orden=clases.orden_columnas.Orden_columnas,
                   fila_dato_inicial='1',
                   sufijo='',
                   prefijo='',
-                  col_testigo='A',
-                  col_denominacion='I',
-                  col_tipo_comprobante='B'):
+                  col_testigo='A'):
     fila_ultimo_dato = obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial,
                                                   col_testigo=col_testigo)
+
+    columnas_que_importan=[orden.neto, orden.neto_no_g, orden.exento, orden.iva, orden.total]
     wb = openpyxl.load_workbook(wb_url)
     ws = wb.active
     if fila_ultimo_dato < int(fila_dato_inicial):
         wb.save(wb_url.rstrip('.xlsx') + sufijo + '.xlsx')
         return False
 
-    ws[str(col_denominacion) + str(fila_ultimo_dato + 2)] = 'TOTALES :'
+    ws[str(orden.denominacion) + str(fila_ultimo_dato + 2)] = 'TOTALES :'
     for col in columnas_que_importan:
         total = float(0.0)
         for fila in range(int(fila_dato_inicial), fila_ultimo_dato + 1):
             signo = 1
             if ws[str(col) + str(fila)].value is not None:
-                if any(tipo_comprobante.lower() in str(ws[str(col_tipo_comprobante) + str(fila)].value).lower()
+                if any(tipo_comprobante.lower() in str(ws[str(orden.t_comp) + str(fila)].value).lower()
                        for tipo_comprobante in ['crédito', 'credito', 'cred']):
                     signo = -1
                 total += (float(ws[str(col) + str(fila)].value) * signo)
@@ -139,13 +156,13 @@ if not wb_path:
 
 for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
     print('verificando alicuotas para ' + str(os.path.split(archivo)[1]).ljust(50) + ' :', end='')
-    if verifica_alicuotas_xlsx(archivo, columna_neto='L', columna_iva='O', fila_dato_inicial='3'):
+    if verifica_alicuotas_xlsx(archivo, orden=ordcol, fila_dato_inicial='3'):
         print('OK', end='')
     print('')
 
 for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
     output = 'totalizado ' + str(os.path.split(archivo)[1]).ljust(50)
-    if not totaliza_xlsx(archivo, columnas_que_importan=['L', 'M', 'N', 'O', 'P'], fila_dato_inicial='3',
+    if not totaliza_xlsx(archivo, orden=ordcol, fila_dato_inicial='3',
                          prefijo='totalizado_'):
         output = 'No se pudo totalizar ' + str(os.path.split(archivo)[1]) + '. Posiblemente no contiene datos.'
     print(output)
