@@ -9,6 +9,132 @@ import sys
 import itertools
 
 
+class Orden_columnas:
+    def __init__(self,pv,n_comp,t_comp,denominacion,n_documento,t_documento,t_cambio,neto,neto_no_g,exento,iva,total):
+        self._pv=pv
+        self._n_comp=n_comp
+        self._t_comp=t_comp
+        self._denominacion=denominacion
+        self._n_documento=n_documento
+        self._t_documento=t_documento
+        self._t_cambio=t_cambio
+        self._neto=neto
+        self._neto_no_g=neto_no_g
+        self._exento=exento
+        self._iva=iva
+        self._total=total
+
+    @property
+    def pv(self):
+        return self._pv
+
+    @pv.setter
+    def pv(self, pv):
+        self._pv=pv
+
+    @property
+    def n_comp(self):
+        return self._n_comp
+
+    @n_comp.setter
+    def n_comp(self, n_comp):
+        self._n_comp=n_comp
+
+    @property
+    def t_comp(self):
+        return self._t_comp
+
+    @t_comp.setter
+    def t_comp(self, t_comp):
+        self._t_comp=t_comp
+
+    @property
+    def denominacion(self):
+        return self._denominacion
+
+    @denominacion.setter
+    def denominacion(self, denominacion):
+        self._denominacion=denominacion
+
+    @property
+    def n_documento(self):
+        return self._n_documento
+
+    @n_documento.setter
+    def n_documento(self,n_documento):
+        self._n_documento=n_documento
+
+    @property
+    def t_documento(self):
+        return self._t_documento
+
+    @t_documento.setter
+    def t_documento(self,t_documento):
+        self._t_documento=t_documento
+
+    @property
+    def t_cambio(self):
+        return self._t_cambio
+
+    @t_cambio.setter
+    def t_cambio(self, t_cambio):
+        self._t_cambio=t_cambio
+
+    @property
+    def neto(self):
+        return self._neto
+
+    @neto.setter
+    def neto(self, neto):
+        self._neto=neto
+
+    @property
+    def neto_no_g(self):
+        return self._neto_no_g
+
+    @neto_no_g.setter
+    def neto_no_g(self, neto_no_g):
+        self._neto_no_g=neto_no_g
+
+    @property
+    def exento(self):
+        return self._exento
+
+    @exento.setter
+    def exento(self, exento):
+        self._exento=exento
+
+    @property
+    def iva(self):
+        return self._iva
+
+    @iva.setter
+    def iva(self, iva):
+        self._iva=iva
+
+    @property
+    def total(self):
+        return self._total
+
+    @total.setter
+    def total(self,total):
+        self._total=total
+
+
+ordcol=Orden_columnas(pv='C',
+                      n_comp='D',
+                      t_comp='B',
+                      denominacion='H',
+                      n_documento='G',
+                      t_documento='F',
+                      t_cambio='I',
+                      neto='K',
+                      neto_no_g='L',
+                      exento='M',
+                      iva='N',
+                      total='O')
+
+
 def normpath(path=''):
     return os.path.expanduser(os.path.normpath(path))
 
@@ -73,8 +199,7 @@ def obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial='1', col_testigo='A')
 
 
 def verifica_alicuotas_xlsx(wb_url,
-                            columna_neto='',
-                            columna_iva='',
+                            orden=Orden_columnas,
                             fila_dato_inicial='1',
                             col_testigo='A'):
     sin_errores = True
@@ -87,12 +212,12 @@ def verifica_alicuotas_xlsx(wb_url,
     ws = wb.active
     for fila in range(int(fila_dato_inicial), fila_ultimo_dato + 1):
         if not alicuotas_verificadas(
-                neto=float(none_floater(ws[str(columna_neto) + str(fila)].value)),
-                iva=float(none_floater(ws[str(columna_iva) + str(fila)].value))):
+                neto=float(none_floater(ws[str(orden.neto) + str(fila)].value)),
+                iva=float(none_floater(ws[str(orden.iva) + str(fila)].value))):
             sin_errores = False
-            loguear('NO se verifica combinatoria de alicuotas posible para [' + str(columna_neto) + str(
+            loguear('NO se verifica combinatoria de alicuotas posible para [' + str(orden.neto) + str(
                 fila) + '] en ' + str(os.path.split(wb_url)[1]) + '\n')
-            print('NO se verifica combinatoria de alicuotas posible para [' + str(columna_neto) + str(
+            print('NO se verifica combinatoria de alicuotas posible para [' + str(orden.neto) + str(
                 fila) + '] en ' + str(os.path.split(wb_url)[1]))
     wb.close()
     return sin_errores
@@ -104,21 +229,21 @@ def celda_fnorm(celda):
     return float(str(celda.value).replace(',', '.'))
 
 
-def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A'):
+def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A', orden=Orden_columnas):
     wb = openpyxl.load_workbook(wb_url)
     ws = wb.active
     if obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial, col_testigo=col_testigo) < int(fila_dato_inicial):
         wb.save(wb_url.rstrip('.xlsx') + '_corregido-enblanco.xlsx')
         return False
 
-    col_tipo_comp = 'B'
-    col_tcambio = 'J'
-    col_netog = 'L'
-    col_nog = 'M'
-    col_op_ex = 'N'
-    col_iva = 'O'
-    col_total = 'P'
-    ws['D2'] = 'N. Comp.'
+    col_tipo_comp = orden.t_comp
+    col_tcambio = orden.t_cambio
+    col_netog = orden.neto
+    col_nog = orden.neto_no_g
+    col_op_ex = orden.exento
+    col_iva = orden.iva
+    col_total = orden.total
+    ws[str(orden.n_comp)+'2'] = 'N. Comp.'
 
     for fila in range(int(fila_dato_inicial), obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial, col_testigo=col_testigo) + 1):
         alic=21
@@ -149,28 +274,28 @@ def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A'):
 
 
 def totaliza_xlsx(wb_url,
-                  columnas_que_importan=[],
+                  orden=Orden_columnas,
                   fila_dato_inicial='1',
                   sufijo='',
                   prefijo='',
-                  col_testigo='A',
-                  col_denominacion='I',
-                  col_tipo_comprobante='B'):
+                  col_testigo='A'):
     fila_ultimo_dato = obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial,
                                                   col_testigo=col_testigo)
+
+    columnas_que_importan=[orden.neto, orden.neto_no_g, orden.exento, orden.iva, orden.total]
     wb = openpyxl.load_workbook(wb_url)
     ws = wb.active
     if fila_ultimo_dato < int(fila_dato_inicial):
         wb.save(wb_url.rstrip('.xlsx') + sufijo + '.xlsx')
         return False
 
-    ws[str(col_denominacion) + str(fila_ultimo_dato + 2)] = 'TOTALES :'
+    ws[str(orden.denominacion) + str(fila_ultimo_dato + 2)] = 'TOTALES :'
     for col in columnas_que_importan:
         total = float(0.0)
         for fila in range(int(fila_dato_inicial), fila_ultimo_dato + 1):
             signo = 1
             if ws[str(col) + str(fila)].value is not None:
-                if any(tipo_comprobante.lower() in str(ws[str(col_tipo_comprobante) + str(fila)].value).lower()
+                if any(tipo_comprobante.lower() in str(ws[str(orden.t_comp) + str(fila)].value).lower()
                        for tipo_comprobante in ['crédito', 'credito', 'cred']):
                     signo = -1
                 total += (float(ws[str(col) + str(fila)].value) * signo)
@@ -212,15 +337,15 @@ def ajusta_columna(hoja, ncol, cushion=int(8), fila_inicial=int(2)):
     hoja.column_dimensions[get_column_letter(ncol)].width = max_w + cushion
 
 
-def corrige_nombres_campo(hoja, fila_titulos=int(2)):
-    col_pv = 'C'
-    col_n_comp = 'D'
-    col_tipo_doc = 'G'
-    col_n_doc = 'H'
-    col_t_cambio = 'J'
-    col_neto_g = 'L'
-    col_neto_no_g = 'M'
-    col_exento = 'N'
+def corrige_nombres_campo(hoja, fila_titulos=int(2),orden=Orden_columnas):
+    col_pv = f'{orden.pv}'
+    col_n_comp = f'{orden.n_comp}'
+    col_tipo_doc = f'{orden.t_documento}'
+    col_n_doc = f'{orden.n_documento}'
+    col_t_cambio = f'{orden.t_cambio}'
+    col_neto_g = f'{orden.neto}'
+    col_neto_no_g = f'{orden.neto_no_g}'
+    col_exento = f'{orden.exento}'
     hoja[col_pv + str(fila_titulos)] = 'P.Venta'
     hoja[col_n_comp + str(fila_titulos)] = 'N.Comp.'
     hoja[col_tipo_doc + str(fila_titulos)] = 'Tipo Doc.'
@@ -243,20 +368,20 @@ cuit = str(input('CUIT         :'))
 titulo = str(input('TITULO       :'))
 for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
     print('verificando alicuotas para ' + str(os.path.split(archivo)[1]).ljust(50) + ' :', end='')
-    if verifica_alicuotas_xlsx(archivo, columna_neto='L', columna_iva='O', fila_dato_inicial='3'):
+    if verifica_alicuotas_xlsx(archivo, ordcol, fila_dato_inicial='3'):
         print('OK', end='')
     print('')
 
 for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
     output = 'totalizado ' + str(os.path.split(archivo)[1]).ljust(50)
-    url_corregido = corrige_valores_compra(wb_url=archivo, fila_dato_inicial='3', col_testigo='A')
-    if not totaliza_xlsx(url_corregido, columnas_que_importan=['L', 'M', 'N', 'O', 'P'], fila_dato_inicial='3',
+    url_corregido = corrige_valores_compra(wb_url=archivo, fila_dato_inicial='3', col_testigo='A',orden=ordcol)
+    if not totaliza_xlsx(url_corregido, orden=ordcol, fila_dato_inicial='3',
                          prefijo=''):
         output = 'No se pudo totalizar ' + str(os.path.split(archivo)[1]) + '. Posiblemente no contiene datos.'
     print(output)
     wb = openpyxl.load_workbook(url_corregido)
     ws = wb.active
-    corrige_nombres_campo(ws)
+    corrige_nombres_campo(ws,orden=ordcol)
     for celdas_mergeadas in list(ws.merged_cells):
         ws.unmerge_cells(range_string=str(celdas_mergeadas))
     ws['A1'] = razon_social
