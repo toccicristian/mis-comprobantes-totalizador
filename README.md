@@ -6,6 +6,4 @@
  del archivo que contiene al libro relacionado.
 
  Antes de utilizar el totalizador de compras para una serie de libros,
- recordar verificar el orden de las columnas en la instanciacion de ordcol.
- 
- 
+ recordar verificar el orden de las columnas en config.ini.
