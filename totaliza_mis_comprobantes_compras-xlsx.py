@@ -27,7 +27,7 @@ ordcol=clases.orden_columnas.Orden_columnas(pv=configuracion.get('Iva Compras','
 
 
 def normpath(path=''):
-    return os.path.expanduser(os.path.normpath(path))
+    return os.path.normpath(os.path.expanduser(path))
 
 
 def valida_parametros():
@@ -120,7 +120,7 @@ def celda_fnorm(celda):
     return float(str(celda.value).replace(',', '.'))
 
 
-def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A', orden=clases.orden_columnas.Orden_columnas):
+def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A', orden=clases.orden_columnas.Orden_columnas, prioridad=""):
     wb = openpyxl.load_workbook(wb_url)
     ws = wb.active
     if obtiene_n_fila_ultimo_dato(wb_url, n_fila_dato_inicial=fila_dato_inicial, col_testigo=col_testigo) < int(fila_dato_inicial):
@@ -141,14 +141,28 @@ def corrige_valores_compra(wb_url, fila_dato_inicial='3', col_testigo='A', orden
         if alicuotas_verificadas(neto=celda_fnorm(ws[col_netog + str(fila)]),iva=celda_fnorm(ws[col_iva + str(fila)])):
             alic=alicuotas_verificadas(neto=celda_fnorm(ws[col_netog + str(fila)]),iva=celda_fnorm(ws[col_iva + str(fila)]))[0]
 
-        ws[col_iva + str(fila)] = round(celda_fnorm(ws[col_netog + str(fila)]) * alic / 100,2)
-        ws[col_nog + str(fila)] = round(celda_fnorm(ws[col_total + str(fila)]) -
-                                        celda_fnorm(ws[col_netog + str(fila)]) -
-                                        celda_fnorm(ws[col_op_ex + str(fila)]) -
-                                        celda_fnorm(ws[col_iva + str(fila)]), 2)
+        col_correccion=False
+        if prioridad=="iva":
+            col_correccion=col_netog
+            monto_corregido=round(celda_fnorm(ws[col_iva + str(fila)])*100/alic,2)
+        if prioridad=="neto":
+            col_correccion=col_iva
+            monto_corregido=round(celda_fnorm(ws[col_netog + str(fila)]) * alic / 100,2)
 
-        if float(ws[col_nog + str(fila)].value) < 0.0:
-            ws[col_nog + str(fila)] = round(0.0, 2)
+        if (col_correccion):
+            ws[col_correccion + str(fila)] = monto_corregido
+            # ws[col_iva + str(fila)] = round(celda_fnorm(ws[col_netog + str(fila)]) * alic / 100,2)
+
+            ws[col_nog + str(fila)] = round(celda_fnorm(ws[col_total + str(fila)]) -
+                                            celda_fnorm(ws[col_netog + str(fila)]) -
+                                            celda_fnorm(ws[col_op_ex + str(fila)]) -
+                                            celda_fnorm(ws[col_iva + str(fila)]), 2)
+
+            if float(ws[col_nog + str(fila)].value) < 0.0:
+                ws[col_nog + str(fila)] = round(0.0, 2)
+                ws[col_total + str(fila)] = round(celda_fnorm(ws[col_netog + str(fila)]) +
+                                                  celda_fnorm(ws[col_op_ex + str(fila)]) +
+                                                  celda_fnorm(ws[col_iva + str(fila)]), 2)
 
         for col in [col_netog,col_nog,col_op_ex,col_iva,col_total]: # convierto a tipo de cambio:
             ws[col + str(fila)] = round(celda_fnorm(ws[col + str(fila)])*celda_fnorm(ws[col_tcambio + str(fila)]),2)
@@ -257,6 +271,13 @@ if not wb_path:
 razon_social = str(input('RAZON SOCIAL :'))
 cuit = str(input('CUIT         :'))
 titulo = str(input('TITULO       :'))
+priorizar=""
+opcion=str(input('Ante diferencias, priorizar (N)eto/(Iva)?[n,i]\n(dejar en blanco para valores originales):')).lower().rstrip()
+if (opcion)=='n':
+    priorizar="neto"
+if (opcion)=='i':
+    priorizar="iva"
+
 for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
     print('verificando alicuotas para ' + str(os.path.split(archivo)[1]).ljust(50) + ' :', end='')
     if verifica_alicuotas_xlsx(archivo, ordcol, fila_dato_inicial='3'):
@@ -265,7 +286,7 @@ for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
 
 for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
     output = 'totalizado ' + str(os.path.split(archivo)[1]).ljust(50)
-    url_corregido = corrige_valores_compra(wb_url=archivo, fila_dato_inicial='3', col_testigo='A',orden=ordcol)
+    url_corregido = corrige_valores_compra(wb_url=archivo, fila_dato_inicial='3', col_testigo='A',orden=ordcol,prioridad=priorizar)
     if not totaliza_xlsx(url_corregido, orden=ordcol, fila_dato_inicial='3',
                          prefijo=''):
         output = 'No se pudo totalizar ' + str(os.path.split(archivo)[1]) + '. Posiblemente no contiene datos.'
