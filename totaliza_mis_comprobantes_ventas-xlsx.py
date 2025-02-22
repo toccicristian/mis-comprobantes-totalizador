@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 import openpyxl
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import alignment
 import os
 import glob
 import sys
@@ -147,12 +149,87 @@ def totaliza_xlsx(wb_url,
     return True
 
 
+def corrige_nombres_campo(hoja, fila_titulos=int(2)):
+    hoja[ordcol.pv + str(fila_titulos)] = 'P.Venta'
+    hoja[ordcol.n_comp + str(fila_titulos)] = 'N.Comp.'
+    hoja[ordcol.t_comp + str(fila_titulos)] = 'Tipo Doc.'
+    hoja[ordcol.n_documento + str(fila_titulos)] = 'N. Doc.'
+    hoja[ordcol.t_cambio + str(fila_titulos)] = 'T.Cambio'
+    hoja[ordcol.neto + str(fila_titulos)] = 'Neto G.'
+    hoja[ordcol.neto_no_g + str(fila_titulos)] = 'Neto no G.'
+    hoja[ordcol.exento + str(fila_titulos)] = 'Exento'
+
+
+def formatea_matriz_numeros(ws, ncol_i=int(), ncol_f=int(), nfila_i=int(), nfila_f=int(), formato='#,##0.00'):
+    for ncol in range(ncol_i, ncol_f):
+        for nfila in range(nfila_i, nfila_f):
+            ws[get_column_letter(ncol) + str(nfila)].number_format = formato
+    return True
+
+
+def ajusta_columnas(hoja, cushion=int(2), fila_inicial=int(2)):
+    for ncol in range(hoja.min_column, hoja.max_column + 1):
+        lista_celdas = list()
+        for nfila in range(fila_inicial, hoja.max_row + 1):
+            lista_celdas.append(hoja[get_column_letter(ncol) + str(nfila)].value)
+        max_w = 0
+        for item in lista_celdas:
+            if len(str(none_crusher(item))) > max_w:
+                max_w = len(str(none_crusher(item)))
+        hoja.column_dimensions[get_column_letter(ncol)].width = max_w + cushion
+
+
+def ajusta_columna(hoja, ncol, cushion=int(8), fila_inicial=int(2)):
+    lista_celdas = list()
+    for nfila in range(fila_inicial, hoja.max_row + 1):
+        lista_celdas.append(hoja[get_column_letter(ncol) + str(nfila)].value)
+    max_w = 0
+    for item in lista_celdas:
+        if len(str(none_crusher(item))) > max_w:
+            max_w = len(str(none_crusher(item)))
+    hoja.column_dimensions[get_column_letter(ncol)].width = max_w + cushion
+
+
+def formatea_wb(wb_url, nombre="", cuit="", titulo=""):
+    wb = openpyxl.load_workbook(wb_url)
+    ws = wb.active
+    corrige_nombres_campo(ws)
+    for celdas_mergeadas in list(ws.merged_cells):
+        ws.unmerge_cells(range_string=str(celdas_mergeadas))
+    ws['A1'] = nombre
+    ws.cell(1, 1).alignment = openpyxl.styles.Alignment(horizontal='left')
+    ws['C1'] = 'CUIT :'+cuit
+    ws.cell(1, 3).alignment = openpyxl.styles.Alignment(horizontal='left')
+    ws['I1'] = titulo
+    ws.cell(1, 9).alignment = openpyxl.styles.Alignment(horizontal='left')
+    ws.delete_cols(5, 2)
+    ajusta_columnas(ws, cushion=2, fila_inicial=2)
+    ajusta_columna(ws, ncol=1, cushion=1, fila_inicial=2)
+    ajusta_columna(ws, ncol=7, cushion=6, fila_inicial=2)
+    formatea_matriz_numeros(ws, ws.max_column - 4, ws.max_column + 1, ws.min_row + 2, ws.max_row + 3)
+    for n_col in range(10, 15):
+        ajusta_columna(ws, ncol=n_col, cushion=4)
+    ajusta_columna(ws, ncol=ws.max_column - 2, cushion=6)
+    ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
+    ws.page_setup.paperHeight = '297mm'
+    ws.page_setup.paperWidth = '210mm'
+    ws.page_setup.fitToPage = True
+    ws.page_setup.fitToHeight = False
+    wb.save(wb_url)
+    wb.close()
+
+
 wb_path = valida_parametros()
 if not wb_path:
     wb_path = normpath(input('Arrastre el dir:').rstrip())
     if not os.path.isdir(wb_path):
         print('El directorio no existe.')
         sys.exit()
+
+razon_social = str(input('RAZON SOCIAL :'))
+n_cuit = str(input('CUIT         :'))
+titulo_libro = str(input('TITULO       :'))
+
 
 for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
     print('verificando alicuotas para ' + str(os.path.split(archivo)[1]).ljust(50) + ' :', end='')
@@ -166,3 +243,10 @@ for archivo in sorted(glob.glob(os.path.join(wb_path, '*.xlsx'))):
                          prefijo='totalizado_'):
         output = 'No se pudo totalizar ' + str(os.path.split(archivo)[1]) + '. Posiblemente no contiene datos.'
     print(output)
+
+
+for archivo in sorted(glob.glob(os.path.join(wb_path, "*.xlsx"))):
+    formatea_wb(archivo, nombre=razon_social, cuit=n_cuit, titulo=titulo_libro)
+
+
+
